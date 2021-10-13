@@ -1,0 +1,79 @@
+<!doctype html>
+<meta name="timeout" content="long">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/common/utils.js"></script>
+<script src="/common/dispatcher/dispatcher.js"></script>
+<script src="resources/helper.sub.js"></script>
+<script>
+// https://bugs.chromium.org/p/chromium/issues/detail?id=1202687
+// https://html.spec.whatwg.org/multipage/timers-and-user-prompts.html#timers:fully-active
+promise_test(async t => {
+  const pageA = new RemoteContext(token());
+  const pageB = new RemoteContext(token());
+
+  const urlA = location.origin + executorPath + pageA.context_id;
+  const urlB = originCrossSite + executorPath + pageB.context_id;
+
+  const delayMain = 8000;
+  const delayBeforeNavigation = 3000;
+  const delayBeforeBackNavigation = 3000;
+
+  window.open(urlA, '_blank', 'noopener');
+
+  const startTime = performance.now();
+
+  await pageA.execute_script(waitForPageShow);
+  await pageA.execute_script(
+    (url, delayMain, delayBeforeNavigation) => {
+      window.promiseMainTimer = new Promise(resolve => {
+        setTimeout(resolve, delayMain);
+      });
+
+      prepareNavigation(() => {
+        setTimeout(() => location.href = url, delayBeforeNavigation);
+      });
+    },
+    [urlB, delayMain, delayBeforeNavigation]);
+
+  await pageB.execute_script(waitForPageShow);
+  await pageB.execute_script(
+    (delayBeforeBackNavigation) => {
+      prepareNavigation(() => {
+        setTimeout(() => history.back(), delayBeforeBackNavigation);
+      });
+    },
+    [delayBeforeBackNavigation]
+  );
+
+  await pageA.execute_script(waitForPageShow);
+  await assert_bfcached(pageA);
+
+  await pageA.execute_script(() => window.promiseMainTimer);
+
+  const actualDelay = performance.now() - startTime;
+
+  // Expected delay:
+  //    `delayMain + delayBeforeBackNavigation`
+  //    (The timer stops during the page is in BFCache)
+  // Failure #1:
+  //    `delayMain` (The timer doesn't stop)
+  // Failure #2:
+  //    `delayMain + delayBeforeBackNavigation + delayBeforeNavigation`
+  //    (The timer is reset when restored from BFCache)
+
+  const slack = 2500;
+  assert_less_than(slack, delayBeforeNavigation,
+    'Slack should be < delayBeforeNavigation to catch Failure #2');
+
+  if (actualDelay < delayMain + delayBeforeBackNavigation) {
+    assert_unreached(
+      "The timer is fired too early. " +
+      "Maybe the time doesn't stop while being inactive in BFCache");
+  } else if (actualDelay > delayMain + delayBeforeBackNavigation + slack) {
+    assert_unreached(
+      "The timer is fired too late. " +
+      "Maybe the time is reset when restored from BFCache");
+  }
+}, 'Timers should stop during the page is in BFCache');
+</script>

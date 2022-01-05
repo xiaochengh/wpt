@@ -25,7 +25,8 @@ function usb_test(func, name, properties) {
         await loadScript('/resources/chromium/webusb-test.js');
       }
     }
-    assert_implements(navigator.usb.test, 'missing navigator.usb.test after initialization');
+    assert_implements(
+        navigator.usb.test, 'missing navigator.usb.test after initialization');
 
     await navigator.usb.test.initialize();
     try {
@@ -52,11 +53,11 @@ function connectionEventPromise(eventType) {
 // Creates a fake device and returns a promise that resolves once the
 // 'connect' event is fired for the fake device. The promise is resolved with
 // an object containing the fake USB device and the corresponding USBDevice.
-function getFakeDevice() {
+function getFakeDevice(deviceInit = fakeDeviceInit) {
   let promise = connectionEventPromise('connect');
-  let fakeDevice = navigator.usb.test.addFakeDevice(fakeDeviceInit);
+  let fakeDevice = navigator.usb.test.addFakeDevice(deviceInit);
   return promise.then(device => {
-    return { device: device, fakeDevice: fakeDevice };
+    return {device: device, fakeDevice: fakeDevice};
   });
 }
 
@@ -69,13 +70,15 @@ function waitForDisconnect(fakeDevice) {
 }
 
 function assertRejectsWithError(promise, name, message) {
-  return promise.then(() => {
-    assert_unreached('expected promise to reject with ' + name);
-  }, error => {
-    assert_equals(error.name, name);
-    if (message !== undefined)
-      assert_equals(error.message, message);
-  });
+  return promise.then(
+      () => {
+        assert_unreached('expected promise to reject with ' + name);
+      },
+      error => {
+        assert_equals(error.name, name);
+        if (message !== undefined)
+          assert_equals(error.message, message);
+      });
 }
 
 function assertDeviceInfoEquals(usbDevice, deviceInit) {
@@ -84,8 +87,9 @@ function assertDeviceInfoEquals(usbDevice, deviceInit) {
       if (deviceInit.activeConfigurationValue == 0) {
         assert_equals(usbDevice.configuration, null);
       } else {
-        assert_equals(usbDevice.configuration.configurationValue,
-                      deviceInit.activeConfigurationValue);
+        assert_equals(
+            usbDevice.configuration.configurationValue,
+            deviceInit.activeConfigurationValue);
       }
     } else if (Array.isArray(deviceInit[property])) {
       assert_equals(usbDevice[property].length, deviceInit[property].length);
@@ -110,5 +114,17 @@ function callWithTrustedClick(callback) {
     };
     document.body.appendChild(button);
     test_driver.click(button);
+  });
+}
+
+/**
+ * Runs the garbage collection.
+ * @returns {Promise<void>} Resolves when garbage collection has finished.
+ */
+function runGarbageCollection() {
+  // Run gc() as a promise.
+  return new Promise(function(resolve, reject) {
+    GCController.collect();
+    step_timeout(resolve, 0);
   });
 }

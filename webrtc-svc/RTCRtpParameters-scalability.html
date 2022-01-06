@@ -84,4 +84,63 @@
     assert_true(svcSupported);
   }, `Sender capabilities should include at least some scalability modes`);
 
+// Open spec issue: https://github.com/w3c/webrtc-svc/issues/58
+promise_test(async t => {
+  const pc = new RTCPeerConnection();
+  t.add_cleanup(() => pc.close());
+  const { sender } = pc.addTransceiver('video', {
+    sendEncodings: [{}],
+  });
+  const param = sender.getParameters();
+  const encoding = getFirstEncoding(param);
+
+  assert_true(!('scalabilityMode' in encoding));
+
+}, 'Not setting a scalability mode results in no scalability mode shown');
+
+// Open spec issue: https://github.com/w3c/webrtc-svc/issues/57
+promise_test(async t => {
+    const pc = new RTCPeerConnection();
+    t.add_cleanup(() => pc.close());
+    const { sender } = pc.addTransceiver('video', {
+      sendEncodings: [{scalabilityMode: 'TotalNonsense'}],
+    });
+    const param = sender.getParameters();
+    const encoding = getFirstEncoding(param);
+
+    assert_equals(encoding.scalabilityMode, 'TotalNonsense');
+
+}, 'Setting a scalability mode to nonsense is preserved');
+
+
+// Open spec isuse: https://github.com/w3c/webrtc-svc/issues/59
+promise_test(async t => {
+  const v = document.createElement('video');
+  v.autoplay = true;
+  const pc1 = new RTCPeerConnection();
+  const pc2 = new RTCPeerConnection();
+  t.add_cleanup(() => pc1.close());
+  t.add_cleanup(() => pc2.close());
+  const stream1 = await getNoiseStream({ video: { signal: 100 , width: 60, height: 60} });
+  const [track1] = stream1.getTracks();
+  t.add_cleanup(() => track1.stop());
+  const transceiver = pc1.addTransceiver(track1, {
+    sendEncodings: [{ scalabilityMode: 'L3T3' }],
+  });
+  // Pick a codec known to not have L3T3 support
+  const capabilities = RTCRtpSender.getCapabilities('video');
+  const codec = capabilities.codecs.find(c => c.mimeType === 'video/VP8');
+  assert_true(codec !== undefined);
+  transceiver.setCodecPreferences([codec]);
+  const haveTrackEvent = new Promise(r => pc2.ontrack = r);
+  exchangeIceCandidates(pc1, pc2);
+  await exchangeOfferAnswer(pc1, pc2);
+  v.srcObject = new MediaStream([(await haveTrackEvent).track]);
+  await new Promise(r => v.onloadedmetadata = r);
+  await detectSignal(t, v, 100);
+  const sendParams = pc1.getSenders()[0].getParameters();
+  assert_equals(sendParams.encodings[0].scalabilityMode, 'L3T3');
+}, 'L3T3 on VP8 should return what is set initially');
+
+
 </script>

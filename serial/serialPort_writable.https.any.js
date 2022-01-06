@@ -158,6 +158,10 @@ serial_test(async (t, fake) => {
   const writePromise =
       promise_rejects_exactly(t, 'Aborting.', writer.write(data));
 
+  // Wait for microtasks to execute in order to ensure that the write is in
+  // progress.
+  await Promise.resolve();
+
   await writer.abort('Aborting.');
   await writePromise;
   await port.close();

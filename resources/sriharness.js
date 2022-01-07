@@ -1,17 +1,20 @@
-var SRIScriptTest = function(pass, name, src, integrityValue, crossoriginValue, nonce) {
+var SRIScriptTest = function(pass, name, src, integrityValue, crossoriginValue, nonce, integrityValueAfterPrepare) {
     this.pass = pass;
     this.name = "Script: " + name;
     this.src = src;
     this.integrityValue = integrityValue;
     this.crossoriginValue = crossoriginValue;
     this.nonce = nonce;
+    this.integrityValueAfterPrepare = integrityValueAfterPrepare;
 }
 
 SRIScriptTest.prototype.execute = function() {
     var test = async_test(this.name);
     var e = document.createElement("script");
     e.src = this.src;
-    e.setAttribute("integrity", this.integrityValue);
+    if (this.integrityValue) {
+      e.setAttribute("integrity", this.integrityValue);
+    }
     if(this.crossoriginValue) {
         e.setAttribute("crossorigin", this.crossoriginValue);
     }
@@ -30,6 +33,14 @@ SRIScriptTest.prototype.execute = function() {
        e.addEventListener("error", function() {test.done()});
     }
     document.body.appendChild(e);
+
+    // If `this.integrityValueAfterPrepare` is not set, `this.integrityValue`
+    // is kept as the integrity attribute value.
+    if (this.integrityValueAfterPrepare === null) {
+      e.removeAttribute("integrity");
+    } else if (this.integrityValueAfterPrepare) {
+      e.setAttribute("integrity", this.integrityValueAfterPrepare);
+    }
 };
 
 function set_extra_attributes(element, attrs) {

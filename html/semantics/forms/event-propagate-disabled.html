@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<title>Event propagation on disabled form elements</title>
+<meta charset=utf8>
+<meta name=timeout content=long>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/resources/testdriver.js"></script>
+<script src="/resources/testdriver-vendor.js"></script>
+
+<div id=cases>
+<input data-expected="mousedown,mouseup,click"> <!-- Santity check with non-disabled control -->
+<select disabled="disabled" data-expected=""></select>
+<select disabled="disabled" data-expected=""><option selected="selected">foo</option></select>
+<fieldset disabled="" data-expected="">Text</fieldset>
+<fieldset disabled="" data-expected=""><span>Span</span></fieldset>
+<button disabled="disabled" data-expected="mousedown,mouseup,click">Text</button>
+<button disabled="disabled" data-expected="mousedown,mouseup,click"><span>Span</span></button>
+<textarea disabled="disabled" data-expected="mousedown,mouseup,click"></textarea>
+<input disabled="disabled" type="button" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="checkbox" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="color" value="#000000" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="date" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="datetime-local" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="email" data-expected="mousedown,mouseup,click">
+<!-- <input disabled="disabled" type="file"> -->
+<!-- <input disabled="disabled" type="hidden"> -->
+<input disabled="disabled" type="image" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="month" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="number" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="password" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="radio" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="range" value="50" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="reset" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="search" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="submit" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="tel" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="text" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="time" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="url" data-expected="mousedown,mouseup,click">
+<input disabled="disabled" type="week" data-expected="mousedown,mouseup,click">
+</div>
+
+<script>
+const elements = document.getElementById("cases").children;
+for (let element of elements) {
+  promise_test(async t => {
+    const events = ["mousedown", "mouseup", "click"];
+
+    const setupListener = (target) => {
+      const gotEvents = [];
+      const listenerFn = t.step_func(event => {
+        gotEvents.push(event.type);
+      });
+      events.every(async event => target.addEventListener(event, listenerFn, {once: true}));
+      t.add_cleanup(async () => events.every(event => target.removeEventListener(event, listenerFn)));
+      return gotEvents;
+    };
+
+    const gotElementEvents = setupListener(element);
+    const gotBodyEvents = setupListener(document.body);
+
+    let expectedBody = element.getAttribute("data-expected");
+    expectedBody = expectedBody !== null ? expectedBody.split(",") : [];
+
+    await test_driver.click(element);
+    await new Promise(resolve => t.step_timeout(resolve, 0));
+
+    assert_array_equals(gotElementEvents, events, "Events on the form element");
+    assert_array_equals(gotBodyEvents, expectedBody, "Events propagated to <body>");
+
+  }, `Click on ${element.outerHTML}`);
+}
+</script>

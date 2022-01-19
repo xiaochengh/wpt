@@ -8,6 +8,8 @@
   <li><span id="testReplaceFollowing">A</span> B</li>
   <li>A <span id="testReplaceBoth">B</span> C</li>
   <li><span id="testRemove">Testing</span> removing node using outerText.</li>
+  <li><span id="testEmptyString">Replace this child with the empty string</span></li>
+  <li><span id="testNewlines">Replace this child with lots of newlines</span></li>
 </ul>
 
 <div id="container"></div>
@@ -61,6 +63,31 @@ test(t => {
   assert_equals(container.childNodes[1].data, "BReplacedD");
   assert_equals(container.childNodes[2].data, "E");
 }, "Only merges with the previous and following text nodes, does not completely normalize");
+
+test(t => {
+  const node = document.getElementById("testEmptyString");
+  const parent = node.parentNode;
+
+  node.outerText = "";
+
+  assert_equals(parent.innerHTML, "");
+  assert_equals(parent.childNodes.length, 1);
+  assert_equals(parent.childNodes[0].nodeName, "#text");
+  assert_equals(parent.childNodes[0].data, "");
+}, "Setting outerText to the empty string creates an empty text node");
+
+test(t => {
+  const node = document.getElementById("testNewlines");
+  const parent = node.parentNode;
+
+  node.outerText = "\n\r\n\r";
+
+  assert_equals(parent.innerHTML, "<br><br><br>");
+  assert_equals(parent.childNodes.length, 3);
+  assert_equals(parent.childNodes[0].localName, "br", "node 1");
+  assert_equals(parent.childNodes[1].localName, "br", "node 2");
+  assert_equals(parent.childNodes[2].localName, "br", "node 3");
+}, "Setting outerText to a bunch of newlines creates a bunch of <br>s with no text nodes");
 
 test(() => {
   const node = document.getElementById("testRemove");

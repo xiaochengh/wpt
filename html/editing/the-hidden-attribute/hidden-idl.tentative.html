@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<link rel=author href="mailto:jarhar@chromium.org">
+<link rel=help href="https://github.com/whatwg/html/pull/7475">
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+
+<div>hello</div>
+<script>
+test(() => {
+  const div = document.querySelector('div');
+  assert_equals(div.hidden, false, 'div.hidden should initially be false.');
+  assert_false(div.hasAttribute('hidden'), 'div should initially not have the hidden attribute.');
+
+  div.hidden = true;
+  assert_equals(div.hidden, true, `div.hidden = true should return true.`);
+  assert_equals(div.getAttribute('hidden'), '', `div.hidden = true should set the attribute to ''.`);
+
+  div.hidden = false;
+  div.hidden = 'foo';
+  assert_equals(div.hidden, true, `div.hidden = 'foo' should return true.`);
+  assert_equals(div.getAttribute('hidden'), '', `div.hidden = 'foo' should set the attribute to ''.`);
+
+  div.hidden = false;
+  div.setAttribute('hidden', 'foo');
+  assert_equals(div.hidden, true, `div.setAttribute('hidden','foo') should return true.`);
+  assert_equals(div.getAttribute('hidden'), 'foo', `div.setAttribute('hidden','foo') should set the attribute to 'foo'.`);
+
+  div.hidden = false;
+  div.hidden = 'false';
+  assert_equals(div.hidden, true, `div.hidden = 'false' should return true.`);
+  assert_equals(div.getAttribute('hidden'), '', `div.hidden = 'false' should set the attribute to ''.`);
+
+  div.hidden = false;
+  div.setAttribute('hidden', 'false');
+  assert_equals(div.hidden, true, `div.setAttribute('hidden','false') should return true.`);
+  assert_equals(div.getAttribute('hidden'), 'false', `div.setAttribute('hidden','false') should set the attribute to 'false'.`);
+
+  div.hidden = 'until-found';
+  assert_equals(div.hidden, 'until-found', `div.hidden = 'until-found' should return 'until-found'.`);
+  assert_equals(div.getAttribute('hidden', 'until-found'), 'until-found', `div.hidden = 'until-found' should set the attribute to 'until-found'.`);
+
+  div.hidden = 1;
+  assert_equals(div.hidden, true, `div.hidden = 1 should return true.`);
+
+  div.hidden = 0;
+  assert_equals(div.hidden, false, `div.hidden = 0 should return false.`);
+
+  div.hidden = '';
+  assert_equals(div.hidden, false, `div.hidden = '' should return false.`);
+});
+</script>

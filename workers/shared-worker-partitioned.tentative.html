@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<title>Test partitioning of shared workers</title>
+<script src="/resources/testharness.js"></script>
+<script src="/resources/testharnessreport.js"></script>
+<script src="/common/get-host-info.sub.js"></script>
+
+<body>
+<script>
+async function onload(e) {
+  // const worker1 = new SharedWorker("support/shared-name.js");
+
+  // await new Promise((r) => {
+  //   worker1.port.onmessage = r;
+  // }).then((e) => {
+  //   assert_equals(e.data.counter, 1);
+  // });
+
+  const first_party_url = new URL(
+  'window-sw-shared-name.html',
+    get_host_info().ORIGIN + self.location.pathname);
+
+  window.open(first_party_url);
+
+  await new Promise((r) => {
+    window.onmessage = r;
+  }).then((e) => {
+    assert_equals(e.data.counter, 1);
+  });
+
+
+  const third_party_url = new URL(
+  'window-sw-shared-name.html',
+    get_host_info().HTTP_NOTSAMESITE_ORIGIN + self.location.pathname);
+
+  window.open(third_party_url);
+
+  await new Promise((r) => {
+    window.onmessage = r;
+  }).then((e) => {
+    assert_equals(e.data.counter, 1);
+  });
+}
+
+promise_test((t) => {
+  return new Promise((resolve) => {
+    self.addEventListener('load', resolve);
+  }).then(onload)
+});
+</script>
+</body>
